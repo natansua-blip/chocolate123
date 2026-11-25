@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bar Nine — ช็อกโกแลตแท่งคราฟต์</title>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700&family=Fraunces:wght@600;800&display=swap" rel="stylesheet">
+<style>
+:root{--cocoa:#2b1810;--cream:#f3e3c3;--berry:#b3263e;--paper:#fffaf0;--line:#d9c3a0}
+*{box-sizing:border-box}body{margin:0;font:16px/1.6 Prompt,sans-serif;color:var(--cocoa);background:var(--paper)}
+.hero{background:var(--cocoa);color:var(--cream);padding:72px 24px 56px;text-align:left}
+.wrap{max-width:960px;margin:auto}
+h1{font:800 clamp(44px,9vw,96px)/1 Fraunces,serif;margin:0 0 16px}
+.hero p{max-width:32em;font-size:18px;margin:0 0 24px}
+.btn{display:inline-block;background:var(--berry);color:#fff;border:0;padding:14px 28px;font:600 16px Prompt;border-radius:4px;cursor:pointer;text-decoration:none}
+.btn:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #f0a500;outline-offset:2px}
+section{padding:48px 24px}
+h2{font:800 32px Fraunces,serif;margin:0 0 24px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px}
+.card{border:1px solid var(--line);background:#fff;padding:16px}
+.card img{width:100%;display:block;background:var(--cream)}
+.card h3{margin:12px 0 0}.price{font-weight:700;color:var(--berry)}
+.qty{display:flex;align-items:center;gap:8px;margin-top:8px}.qty input{width:70px}
+form{display:grid;gap:12px;max-width:560px}
+label{font-weight:600;display:grid;gap:4px}
+input,textarea{font:inherit;padding:10px;border:1px solid var(--line);border-radius:4px}
+#msg{font-weight:600;margin-top:12px}
+footer{padding:24px;background:var(--cocoa);color:var(--cream)}
+</style></head>
+<body>
+<header class="hero"><div class="wrap">
+<h1>Bar Nine</h1>
+<p>ช็อกโกแลตแท่งคราฟต์จากเมล็ดโกโก้ไทย คั่วและบดเป็นล็อตเล็ก ไม่ใส่สารกันบูด</p>
+<a class="btn" href="#order">สั่งซื้อเลย</a></div></header>
+
+<section><div class="wrap"><h2>เลือกแท่งที่ใช่</h2><div class="grid" id="products"></div></div></section>
+
+<section id="order" style="background:var(--cream)"><div class="wrap">
+<h2>กรอกที่อยู่จัดส่ง</h2>
+<form id="f">
+<label>ชื่อ-นามสกุล<input name="name" required></label>
+<label>เบอร์โทร<input name="phone" type="tel" pattern="0[0-9]{8,9}" required></label>
+<label>ที่อยู่ (บ้านเลขที่ ถนน ตำบล อำเภอ จังหวัด)<textarea name="address" rows="3" required></textarea></label>
+<label>รหัสไปรษณีย์<input name="zip" pattern="[0-9]{5}" required></label>
+<div>ยอดรวม: <b id="total">0</b> บาท (ค่าส่งเหมาจ่าย 40 บาท)</div>
+<button class="btn" type="submit">ยืนยันคำสั่งซื้อ</button>
+<div id="msg" role="status"></div>
+</form></div></section>
+<footer><div class="wrap">Bar Nine · โครงงานนักศึกษา</div></footer>
+
+<script>
+// 1) วาง URL ของ Google Apps Script (Web app) ที่นี่
+const API = "PASTE_APPS_SCRIPT_URL";
+const SHIPPING = 40;
+// ข้อมูลสำรอง ใช้เมื่อยังไม่ตั้งค่า API
+const FALLBACK = [
+ {sku:"BN-D70",name:"Dark 70% ดาร์กช็อกโกแลต",price:129,image:"images/dark70.svg"},
+ {sku:"BN-MSS",name:"Milk Sea Salt มิลค์เกลือทะเล",price:119,image:"images/milk.svg"}];
+let products=[];
+const $=s=>document.querySelector(s);
+const fmt=n=>n.toLocaleString("th-TH");
+
+async function load(){
+  try{ if(API.startsWith("http")){ const r=await fetch(API+"?action=products"); products=await r.json(); } }
+  catch(e){ console.warn(e); }
+  if(!products.length) products=FALLBACK;
+  $("#products").innerHTML=products.map(p=>`
+   <div class="card"><img src="${p.image}" alt="${p.name}">
+   <h3>${p.name}</h3><div class="price">${fmt(+p.price)} บาท</div>
+   <div class="qty"><label for="q-${p.sku}">จำนวน</label>
+   <input id="q-${p.sku}" data-sku="${p.sku}" type="number" min="0" max="20" value="0"></div></div>`).join("");
+  document.querySelectorAll("[data-sku]").forEach(i=>i.oninput=calc);
+}
+function lines(){return products.map(p=>({sku:p.sku,product:p.name,price:+p.price,qty:+document.querySelector(`[data-sku="${p.sku}"]`).value||0})).filter(l=>l.qty>0)}
+function calc(){const s=lines().reduce((a,l)=>a+l.price*l.qty,0);$("#total").textContent=fmt(s?s+SHIPPING:0)}
+
+$("#f").onsubmit=async e=>{
+  e.preventDefault();
+  const L=lines(); const msg=$("#msg");
+  if(!L.length){msg.textContent="กรุณาเลือกสินค้าอย่างน้อย 1 รายการ";return}
+  const d=Object.fromEntries(new FormData(e.target));
+  const order={order_id:"BN"+Date.now().toString(36).toUpperCase(),...d,
+    total:L.reduce((a,l)=>a+l.price*l.qty,0)+SHIPPING,lines:L};
+  try{
+    if(!API.startsWith("http")) throw new Error("ยังไม่ได้ตั้งค่า API");
+    await fetch(API,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify(order)});
+    msg.textContent="รับคำสั่งซื้อแล้ว เลขที่ "+order.order_id; e.target.reset(); calc();
+  }catch(err){msg.textContent="ส่งไม่สำเร็จ: "+err.message}
+};
+load();
+</script></body></html>
