@@ -16,7 +16,7 @@ table{border-collapse:collapse;margin-bottom:24px}td,th{border:1px solid #999;pa
 <div class="pick"><h2>ใบหยิบสินค้า (ออเดอร์สถานะ new)</h2><table id="pick"></table></div>
 <h2>ใบปะหน้าพัสดุ</h2><div class="labels" id="labels"></div>
 <script>
-const API="PASTE_APPS_SCRIPT_URL"; // URL เดียวกับ index.html
+const API="https://script.google.com/macros/s/AKfycbxlY_dF9O89SNmdAUuQSs4so7BLr0ipjvAOUb1oBtco_79V7HuKJDDQqnZxQS_oepCpAA/exec"; // URL เดียวกับ index.html
 async function go(){
   const r=await fetch(`${API}?action=orders&key=${encodeURIComponent(key.value)}`);
   const rows=(await r.json()).filter(o=>o.status==="new");
